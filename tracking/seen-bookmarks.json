@@ -1,0 +1,20 @@
+{
+    "proposed": [
+          {
+                  "id": "2095078647652917329",
+                  "title": "DESIGN.md roundup (Tran Mau Tri Tam)",
+                  "url": "https://x.com/tranmautritam/status/2095078647652917329",
+                  "date": "2026-09-04",
+                  "slug": "design-md-lab",
+                  "status": "approved"
+          },
+          {
+                  "id": "2096703869136867563",
+                  "title": "Subtly animated SVGs (Kit Langton)",
+                  "url": "https://x.com/kitlangton/status/2096703869136867563",
+                  "date": "2026-09-07",
+                  "slug": "svg-motion-lab",
+                  "status": "approved"
+          }
+    ]
+}
