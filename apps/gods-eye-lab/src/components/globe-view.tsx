@@ -51,6 +51,13 @@ export default function GlobeView({
     controls.autoRotate = true;
     controls.autoRotateSpeed = 0.4;
     globe.pointOfView({ lat: 30, lng: 10, altitude: 2.2 }, 0);
+    // Idle showcase spin only: stop as soon as the user takes control.
+    const stopSpin = () => {
+      controls.autoRotate = false;
+    };
+    const dom = globe.renderer().domElement;
+    dom.addEventListener("pointerdown", stopSpin);
+    return () => dom.removeEventListener("pointerdown", stopSpin);
   }, [size.width]);
 
   useEffect(() => {
