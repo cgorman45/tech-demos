@@ -147,7 +147,6 @@ export default function GlobeView({
       }
       pointColor={(d) => altitudeColor((d as Aircraft).altFt)}
       pointRadius={0.09}
-      pointsMerge
       pointsTransitionDuration={0}
     />
   );
