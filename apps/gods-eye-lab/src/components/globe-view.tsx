@@ -34,6 +34,7 @@ export default function GlobeView({
   focusIssTick,
 }: GlobeViewProps) {
   const globeRef = useRef<GlobeMethods | undefined>(undefined);
+  const initializedRef = useRef(false);
   const [size, setSize] = useState({ width: 0, height: 0 });
 
   useEffect(() => {
@@ -46,7 +47,10 @@ export default function GlobeView({
 
   useEffect(() => {
     const globe = globeRef.current;
-    if (!globe) return;
+    // Run once when the globe first mounts; window resizes must not
+    // reset the camera or restart the showcase spin.
+    if (!globe || initializedRef.current) return;
+    initializedRef.current = true;
     const controls = globe.controls();
     controls.autoRotate = true;
     controls.autoRotateSpeed = 0.4;
