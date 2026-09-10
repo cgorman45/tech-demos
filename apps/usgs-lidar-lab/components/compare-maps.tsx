@@ -1,9 +1,13 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Map as MLMap, type LngLat } from "maplibre-gl";
+import { AttributionControl, Map as MLMap, setWorkerUrl, type LngLat } from "maplibre-gl";
 import "maplibre-gl/dist/maplibre-gl.css";
 import { lidarStyle, satelliteStyle, PRESETS } from "@/lib/terrain";
+
+// Served from public/ by scripts/sync-maplibre-worker.ts — bundlers can't
+// resolve the worker URL from maplibre's pre-built dist file.
+setWorkerUrl("/maplibre-gl-worker.mjs");
 
 export interface CursorInfo {
   lngLat: LngLat;
@@ -54,7 +58,7 @@ export function CompareMaps({ onReady, onCursor, exaggerationRef }: CompareMapsP
       bearing: start.bearing,
       pitch: start.pitch,
       maxPitch: 80,
-      attributionControl: { compact: true },
+      attributionControl: false as const,
     };
 
     const terrainMap = new MLMap({
@@ -67,10 +71,18 @@ export function CompareMaps({ onReady, onCursor, exaggerationRef }: CompareMapsP
       style: satelliteStyle(),
       ...shared,
     });
+    // Separate corners so the two maps' attributions don't stack.
+    terrainMap.addControl(new AttributionControl({ compact: true }), "bottom-left");
+    satelliteMap.addControl(new AttributionControl({ compact: true }), "bottom-right");
     terrainMapRef.current = terrainMap;
 
     syncMaps(terrainMap, satelliteMap);
     onReady(terrainMap, satelliteMap);
+
+    if (process.env.NODE_ENV !== "production") {
+      // Debug handle for driving/inspecting the maps in dev tooling.
+      (window as unknown as Record<string, unknown>).__maps = { terrainMap, satelliteMap };
+    }
 
     return () => {
       terrainMap.remove();
@@ -130,15 +142,17 @@ export function CompareMaps({ onReady, onCursor, exaggerationRef }: CompareMapsP
 
   return (
     <div ref={containerRef} className="absolute inset-0 overflow-hidden">
+      {/* Wrapper divs own the absolute positioning: maplibre forces
+          `position: relative` on its own container, which would collapse it. */}
       {/* Bottom map: LiDAR-style terrain */}
-      <div ref={terrainDivRef} className="absolute inset-0" />
+      <div className="absolute inset-0">
+        <div ref={terrainDivRef} className="h-full w-full" />
+      </div>
       {/* Top map: satellite imagery, clipped to the right of the divider.
           clip-path also clips hit-testing, so each side stays interactive. */}
-      <div
-        ref={satelliteDivRef}
-        className="absolute inset-0"
-        style={{ clipPath: `inset(0 0 0 ${splitPct}%)` }}
-      />
+      <div className="absolute inset-0" style={{ clipPath: `inset(0 0 0 ${splitPct}%)` }}>
+        <div ref={satelliteDivRef} className="h-full w-full" />
+      </div>
       {/* Swipe divider */}
       <div
         className="absolute inset-y-0 z-20 w-0.5 -translate-x-1/2 cursor-ew-resize bg-white/70 shadow-[0_0_12px_rgba(0,0,0,0.8)]"
