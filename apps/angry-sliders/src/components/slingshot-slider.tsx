@@ -245,9 +245,15 @@ export function SlingshotSlider({ label, min, max, step, defaultValue, format }:
         </span>
       </div>
 
-      <div ref={trackRef} className="relative h-4">
+      <div
+        ref={trackRef}
+        onPointerDown={startDrag}
+        className="relative h-4 touch-none"
+      >
+        {/* taller invisible strip so grabbing the band is forgiving */}
+        <div className="absolute -inset-y-3 inset-x-0 cursor-grab active:cursor-grabbing" />
         {/* track + fill */}
-        <div className="absolute top-1/2 h-[2px] w-full -translate-y-1/2 rounded-full bg-neutral-800" />
+        <div className="pointer-events-none absolute top-1/2 h-[2px] w-full -translate-y-1/2 rounded-full bg-neutral-800" />
         <div
           className="absolute top-1/2 h-[2px] -translate-y-1/2 rounded-full bg-neutral-200 transition-opacity duration-100"
           style={{ width: xOf(value), opacity: active ? 0 : 1 }}
@@ -316,7 +322,6 @@ export function SlingshotSlider({ label, min, max, step, defaultValue, format }:
           aria-valuemax={max}
           aria-valuenow={value}
           aria-valuetext={format(value)}
-          onPointerDown={startDrag}
           onKeyDown={onKeyDown}
           className="absolute left-0 top-1/2 z-20 flex size-10 cursor-grab touch-none items-center justify-center rounded-full outline-none select-none active:cursor-grabbing focus-visible:ring-2 focus-visible:ring-white/25"
           style={{ transform: `translate(${thumbX - 20}px, ${thumbY - 20}px)` }}
