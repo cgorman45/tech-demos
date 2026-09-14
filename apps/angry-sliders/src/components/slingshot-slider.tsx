@@ -51,10 +51,10 @@ export function SlingshotSlider({ label, min, max, step, defaultValue, format }:
   const [flash, setFlash] = React.useState(0);
 
   const trackRef = React.useRef<HTMLDivElement>(null);
-  const rectRef = React.useRef<DOMRect | null>(null);
   const aimRef = React.useRef<Aim | null>(null);
   const flyingRef = React.useRef(false);
   const frameRef = React.useRef(0);
+  const dragCleanup = React.useRef<(() => void) | null>(null);
 
   React.useEffect(() => {
     const el = trackRef.current!;
@@ -64,6 +64,7 @@ export function SlingshotSlider({ label, min, max, step, defaultValue, format }:
     return () => {
       ro.disconnect();
       cancelAnimationFrame(frameRef.current);
+      dragCleanup.current?.();
     };
   }, []);
 
@@ -118,30 +119,43 @@ export function SlingshotSlider({ label, min, max, step, defaultValue, format }:
     return { x: x0, y: y0, pull, arc, landingX, target: valueOf(landingX), vx, vy, tLand, sx };
   }
 
-  function onPointerDown(e: React.PointerEvent<HTMLDivElement>) {
-    if (flyingRef.current) return;
+  // Window-level listeners for the whole drag: robust even when the pointer
+  // leaves the tiny thumb or pointer capture is unavailable.
+  function startDrag(e: React.PointerEvent<HTMLDivElement>) {
+    if (flyingRef.current || dragCleanup.current) return;
     e.preventDefault();
-    rectRef.current = trackRef.current!.getBoundingClientRect();
-    e.currentTarget.setPointerCapture(e.pointerId);
-    const a = computeAim(
-      e.clientX - rectRef.current.left,
-      e.clientY - (rectRef.current.top + rectRef.current.height / 2)
-    );
-    aimRef.current = a;
-    setAim(a);
+    const rect = trackRef.current!.getBoundingClientRect();
+    const toLocal = (ev: { clientX: number; clientY: number }) => ({
+      x: ev.clientX - rect.left,
+      y: ev.clientY - (rect.top + rect.height / 2),
+    });
+
+    const update = (ev: { clientX: number; clientY: number }) => {
+      const p = toLocal(ev);
+      const a = computeAim(p.x, p.y);
+      aimRef.current = a;
+      setAim(a);
+    };
+    update(e);
+
+    const onMove = (ev: PointerEvent) => update(ev);
+    const onUp = () => {
+      cleanup();
+      release();
+    };
+    const cleanup = () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onUp);
+      dragCleanup.current = null;
+    };
+    dragCleanup.current = cleanup;
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onUp);
   }
 
-  function onPointerMove(e: React.PointerEvent<HTMLDivElement>) {
-    if (!aimRef.current || !rectRef.current) return;
-    const a = computeAim(
-      e.clientX - rectRef.current.left,
-      e.clientY - (rectRef.current.top + rectRef.current.height / 2)
-    );
-    aimRef.current = a;
-    setAim(a);
-  }
-
-  function onPointerUp() {
+  function release() {
     const a = aimRef.current;
     aimRef.current = null;
     setAim(null);
@@ -293,7 +307,7 @@ export function SlingshotSlider({ label, min, max, step, defaultValue, format }:
           />
         )}
 
-        {/* thumb */}
+        {/* thumb (16px dot inside a 40px invisible hit area) */}
         <div
           role="slider"
           tabIndex={0}
@@ -302,17 +316,16 @@ export function SlingshotSlider({ label, min, max, step, defaultValue, format }:
           aria-valuemax={max}
           aria-valuenow={value}
           aria-valuetext={format(value)}
-          onPointerDown={onPointerDown}
-          onPointerMove={onPointerMove}
-          onPointerUp={onPointerUp}
-          onPointerCancel={onPointerUp}
+          onPointerDown={startDrag}
           onKeyDown={onKeyDown}
-          className="absolute left-0 top-1/2 z-20 size-4 cursor-grab touch-none rounded-full bg-white outline-none select-none active:cursor-grabbing focus-visible:ring-2 focus-visible:ring-white/40 focus-visible:ring-offset-2 focus-visible:ring-offset-transparent"
-          style={{
-            transform: `translate(${thumbX - 8}px, ${thumbY - 8}px)`,
-            scale: aim ? 1.15 : 1,
-          }}
-        />
+          className="absolute left-0 top-1/2 z-20 flex size-10 cursor-grab touch-none items-center justify-center rounded-full outline-none select-none active:cursor-grabbing focus-visible:ring-2 focus-visible:ring-white/25"
+          style={{ transform: `translate(${thumbX - 20}px, ${thumbY - 20}px)` }}
+        >
+          <div
+            className="size-4 rounded-full bg-white transition-transform duration-100"
+            style={{ transform: aim ? "scale(1.15)" : "scale(1)" }}
+          />
+        </div>
       </div>
     </div>
   );
