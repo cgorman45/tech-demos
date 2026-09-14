@@ -4,7 +4,7 @@ import { SlingshotSlider } from "@/components/slingshot-slider";
 
 export default function Home() {
   return (
-    <main className="flex flex-1 items-center justify-center px-6 py-16">
+    <main className="flex flex-1 select-none items-center justify-center px-6 py-16">
       <div className="w-full max-w-md">
         <header className="mb-16 text-center">
           <h1 className="text-xs font-medium uppercase tracking-[0.3em] text-neutral-500">

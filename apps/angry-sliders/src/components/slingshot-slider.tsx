@@ -234,7 +234,7 @@ export function SlingshotSlider({ label, min, max, step, defaultValue, format }:
   const arc = aim?.arc ?? flight?.arc ?? null;
 
   return (
-    <div className="relative" style={{ zIndex: active ? 40 : undefined }}>
+    <div className="relative select-none" style={{ zIndex: active ? 40 : undefined }}>
       <div className="mb-3 flex items-baseline justify-between">
         <span className="text-[15px] text-neutral-400">{label}</span>
         <span
@@ -281,7 +281,7 @@ export function SlingshotSlider({ label, min, max, step, defaultValue, format }:
               <line x1={landingX} y1={-6} x2={landingX} y2={6} stroke={ACCENT} strokeWidth="2" strokeLinecap="round" />
               {landingTarget !== null && (
                 <text
-                  x={landingX}
+                  x={clamp(landingX, 26, Math.max(width - 26, 26))}
                   y={-14}
                   textAnchor="middle"
                   fill={ACCENT}
