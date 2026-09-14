@@ -1,0 +1,4 @@
+{
+  "name": "Tech Demos",
+  "install": "bash .cursor/install.sh"
+}
