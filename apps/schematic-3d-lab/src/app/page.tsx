@@ -45,7 +45,7 @@ export default function Home() {
         </dl>
       </header>
 
-      <Suspense fallback={<div className="h-[520px] rounded-sm border border-border" />}>
+      <Suspense fallback={<div className="h-[600px] rounded-sm border border-border" />}>
         <Lab />
       </Suspense>
 

@@ -42,7 +42,7 @@ export function Lab() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="relative h-[520px] overflow-hidden rounded-sm border border-border bg-background">
+      <div className="relative h-[600px] overflow-hidden rounded-sm border border-border bg-background">
         <Scene morphRef={morphRef} />
         <div
           className="pointer-events-none absolute inset-0 z-[1]"
@@ -75,7 +75,7 @@ export function Lab() {
           Site metres · Rev A
         </div>
         {morph > 0.93 && (
-          <div className="sheet-chip pointer-events-none absolute bottom-3 left-1/2 z-20 -translate-x-1/2 normal-case tracking-normal">
+          <div className="sheet-chip pointer-events-none absolute bottom-3 left-[156px] z-20 normal-case tracking-normal">
             drag to orbit · right-drag to pan · scroll to zoom
           </div>
         )}
