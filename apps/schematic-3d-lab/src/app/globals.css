@@ -7,8 +7,9 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --font-sans: var(--font-sans);
+  --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+  --font-serif: var(--font-eb-garamond), Georgia, serif;
   --font-heading: var(--font-sans);
   --color-sidebar-ring: var(--sidebar-ring);
   --color-sidebar-border: var(--sidebar-border);
@@ -48,31 +49,34 @@
   --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/* Parchment sheet: warm paper, dark-sepia ink, hairline sepia borders. */
 :root {
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
-  --popover: oklch(1 0 0);
-  --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
-  --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  --paper: #d8d2c0;
+  --ink: #4a4436;
+  --background: var(--paper);
+  --foreground: #3f3a2e;
+  --card: #e6e0cf;
+  --card-foreground: #3f3a2e;
+  --popover: #e6e0cf;
+  --popover-foreground: #3f3a2e;
+  --primary: var(--ink);
+  --primary-foreground: #ece6d6;
+  --secondary: #cbc4af;
+  --secondary-foreground: #3f3a2e;
+  --muted: #cbc4af;
+  --muted-foreground: #6f6757;
+  --accent: #cbc4af;
+  --accent-foreground: #3f3a2e;
+  --destructive: #8f4a3b;
+  --border: rgb(74 68 54 / 0.4);
+  --input: rgb(74 68 54 / 0.4);
+  --ring: rgb(74 68 54 / 0.5);
   --chart-1: oklch(0.87 0 0);
   --chart-2: oklch(0.556 0 0);
   --chart-3: oklch(0.439 0 0);
   --chart-4: oklch(0.371 0 0);
   --chart-5: oklch(0.269 0 0);
-  --radius: 0.625rem;
+  --radius: 0.25rem;
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
   --sidebar-primary: oklch(0.205 0 0);
@@ -123,8 +127,24 @@
   }
   body {
     @apply bg-background text-foreground;
+    background-image:
+      radial-gradient(ellipse at 15% 0%, rgb(255 250 236 / 0.45), transparent 55%),
+      radial-gradient(ellipse at 90% 100%, rgb(110 95 70 / 0.14), transparent 60%),
+      radial-gradient(ellipse at 50% 50%, transparent 55%, rgb(74 68 54 / 0.12) 100%);
   }
   html {
     @apply font-sans;
+  }
+}
+
+@layer components {
+  .sheet-panel {
+    @apply rounded-sm border border-border bg-card/70;
+  }
+  .sheet-label {
+    @apply font-mono text-[10px] uppercase tracking-[0.18em] text-muted-foreground;
+  }
+  .sheet-chip {
+    @apply rounded-sm border border-border bg-card/85 px-2 py-1 font-mono text-[10px] uppercase tracking-[0.16em] text-foreground;
   }
 }

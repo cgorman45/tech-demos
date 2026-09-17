@@ -68,3 +68,21 @@ Explicitly out (deferred):
 
 Multi-site support, real terrain, OSM live fetch UI, animated auto-play tour,
 tests for scene internals, deploy config.
+
+## Visual upgrade pass
+
+The page now reads as an architectural presentation sheet rather than a dark
+HUD: parchment paper (`#d8d2c0`), dark-sepia ink (`#4a4436`), hairline
+borders, a title block, boxed DATA SOURCE / NOTES panels and a static PLAN
+inset (SVG from `civic-center.json`). In the scene, a `MATERIALS` record gives
+each building kind wall/roof/ink tones with a procedural per-floor facade band
+(police: sandstone with strip glazing, jail: cool concrete, parking: exposed
+deck, context: pale massing); an `ANNOTATIONS` table drives leader-line labels
+for SAPD, the City Jail, the largest parking structure and Civic Center Plaza;
+seeded (`mulberry32`) trees are placed in planting zones, rejected within 4 m
+of any footprint, and rendered as two instanced meshes that flatten to plan
+symbols at morph 0. Warm hemisphere + ambient + one directional key with soft
+PCF shadows (radius 8, intensity 0.8) over a paving slab and faint sepia plot
+grid. `?morph=0..1` starts the lab settled at that state for deterministic
+captures. Morph feel, stagger, camera path and the 0.93 orbit handoff are
+unchanged.
