@@ -381,9 +381,11 @@ const ANNOTATIONS: Annotation[] = [
   {
     title: police.name ?? "Police Department",
     sub: site.address,
-    anchor: centroid(police.footprint),
+    // East bay of the roof: the one column from which a north-running leader clears the tree row and
+    // hedges along the plaza's north edge at every morph state.
+    anchor: [30, 1],
     height: police.height,
-    lead: [-8, 150],
+    lead: [-16, 158],
   },
   {
     title: jail.name ?? "City Jail",
@@ -398,9 +400,17 @@ const ANNOTATIONS: Annotation[] = [
     lead: [96, -58],
     run: 24,
   },
-  // Anchored on the open paving west of the jail, clear of the hedge planters.
-  { title: "Civic Center Plaza", anchor: [-80, -70], height: 0, lead: [-112, 10] },
+  // Anchored on the paving south-east of the jail: the one stretch of plaza from which a leader reaches
+  // free sheet without crossing a canopy, a planter or another roof at morph 0, 0.5 or 1.
+  { title: "Civic Center Plaza", anchor: [30, -126], height: 0, lead: [8, -102] },
 ];
+
+/**
+ * Volumes thinner than this cast no shadow. The shadow map stores a caster's underside, and once a box is
+ * flattened its underside lies within the soft-shadow kernel's depth slope (2.3 m reach × cot 36° ≈ 3.2 m,
+ * well past the depth bias), which the kernel reads as a uniform false shadow across the whole roof.
+ */
+const CAST_MIN_HEIGHT = 2;
 
 function BuildingMesh({
   b,
@@ -412,6 +422,7 @@ function BuildingMesh({
   morphRef: MorphRef;
 }) {
   const inner = useRef<THREE.Group>(null);
+  const casting = useRef(true);
   const { geometry, edges, parapet, blocks, dist } = useMemo(() => {
     const geometry = new THREE.ExtrudeGeometry(shapeFrom(b.footprint), {
       depth: b.height,
@@ -435,8 +446,16 @@ function BuildingMesh({
   }, [b]);
 
   useFrame(() => {
-    if (inner.current)
-      inner.current.scale.z = Math.max(localMorph(morphRef.current.smooth, dist), 0.002);
+    const g = inner.current;
+    if (!g) return;
+    g.scale.z = Math.max(localMorph(morphRef.current.smooth, dist), 0.002);
+    const cast = g.scale.z * b.height > CAST_MIN_HEIGHT;
+    if (cast !== casting.current) {
+      casting.current = cast;
+      g.traverse((o) => {
+        if (o instanceof THREE.Mesh) o.castShadow = cast;
+      });
+    }
   });
 
   return (
@@ -504,8 +523,20 @@ function shadeTexture() {
   return t;
 }
 
-/** Horizontal direction shadows fall in (light comes from the north-west). */
-const SHADOW_DIR: [number, number] = [0.81, 0.58];
+/**
+ * Sun bearing for the key light: from the north-east, 36° up. Seen from the south-east camera the east
+ * facades are lit and the south facades shaded, and shadows run ~1.4x height south-west, towards the
+ * viewer's side of each volume. Scene x = east, z = -north.
+ */
+const SUN_AZIMUTH = THREE.MathUtils.degToRad(40);
+const SUN_ELEVATION = THREE.MathUtils.degToRad(36);
+const SUN_POSITION = new THREE.Vector3(
+  Math.cos(SUN_ELEVATION) * Math.sin(SUN_AZIMUTH),
+  Math.sin(SUN_ELEVATION),
+  -Math.cos(SUN_ELEVATION) * Math.cos(SUN_AZIMUTH),
+).multiplyScalar(300);
+/** Horizontal direction shadows fall in (scene x, z). */
+const SHADOW_DIR: [number, number] = [-Math.sin(SUN_AZIMUTH), Math.cos(SUN_AZIMUTH)];
 
 function Trees({ morphRef }: { morphRef: MorphRef }) {
   const trunk = useRef<THREE.InstancedMesh>(null);
@@ -652,7 +683,7 @@ function gridPlotTexture() {
     g.lineWidth = 2;
     for (let m = 20; m < GRID_PLOT.size; m += 20) {
       const p = Math.round(m * px) + 0.5;
-      g.globalAlpha = m % 100 === 0 ? 0.13 : 0.06;
+      g.globalAlpha = m % 100 === 0 ? 0.1 : 0.05;
       g.beginPath();
       g.moveTo(p, 0);
       g.lineTo(p, s);
@@ -721,16 +752,22 @@ const CAMERA_START = pathPosition(0, new THREE.Vector3());
 /** Metres spanned by the canvas height in the flat plan view (m = 0). */
 export const PLAN_VIEW_HEIGHT_M = 2 * PATH_RADIUS[0] * Math.tan((FOV / 2) * (Math.PI / 180));
 
+/** DOM north arrow the rig rotates to match the camera heading. */
+export type NorthRef = MutableRefObject<SVGSVGElement | null>;
+
 /** Drives morph smoothing and the 2D→3D camera path; hands off to orbit at the end. */
 function Rig({
   morphRef,
   controlsRef,
+  northRef,
 }: {
   morphRef: MorphRef;
   controlsRef: MutableRefObject<OrbitControlsImpl | null>;
+  northRef: NorthRef;
 }) {
   const { camera } = useThree();
   const goal = useMemo(() => new THREE.Vector3(), []);
+  const forward = useMemo(() => new THREE.Vector3(), []);
   const orbiting = useRef(false);
 
   useEffect(() => {
@@ -767,10 +804,17 @@ function Rig({
     if (s.target < 0.93) orbiting.current = false;
     else if (s.smooth > 0.93 && camera.position.distanceTo(goal) < 1) orbiting.current = true;
     if (controlsRef.current) controlsRef.current.enabled = orbiting.current;
-    if (orbiting.current) return;
 
-    camera.position.lerp(goal, 1 - Math.exp(-8 * dt));
-    camera.lookAt(LOOK_AT[0], 8 * m, LOOK_AT[1]);
+    if (!orbiting.current) {
+      camera.position.lerp(goal, 1 - Math.exp(-8 * dt));
+      camera.lookAt(LOOK_AT[0], 8 * m, LOOK_AT[1]);
+    }
+
+    // North's clockwise angle from screen-up is the heading of the view direction over the ground
+    // (exactly 0 on the top-down plan, where the path has no yaw). Written straight to the DOM each frame.
+    camera.getWorldDirection(forward);
+    const heading = THREE.MathUtils.radToDeg(Math.atan2(-forward.x, -forward.z));
+    if (northRef.current) northRef.current.style.transform = `rotate(${heading.toFixed(1)}deg)`;
   });
   return null;
 }
@@ -809,7 +853,7 @@ function ScaleBar({ morphRef }: { morphRef: MorphRef }) {
   );
 }
 
-export function Scene({ morphRef }: { morphRef: MorphRef }) {
+export function Scene({ morphRef, northRef }: { morphRef: MorphRef; northRef: NorthRef }) {
   const controlsRef = useRef<OrbitControlsImpl | null>(null);
   const materials = useMemo(() => buildMaterials(), []);
   return (
@@ -822,24 +866,21 @@ export function Scene({ morphRef }: { morphRef: MorphRef }) {
       >
         <color attach="background" args={[PAPER]} />
         <fog attach="fog" args={[PAPER, 1000, 2000]} />
-        <hemisphereLight args={["#fff3dc", "#b39c74", 1.1]} />
-        <ambientLight color="#efdab4" intensity={0.3} />
-        {/* Key light from the north-west so shadows fall south-east, towards the axonometric camera. */}
+        {/* Warm, saturated sky and ambient carry the shadows so they read sepia; the near-white key only adds to lit faces. */}
+        <hemisphereLight args={["#fceac7", "#dcd4c2", 1.4]} />
+        <ambientLight color="#e9c890" intensity={0.4} />
         <directionalLight
-          color="#fff1d6"
-          position={[-140, 260, -100]}
-          intensity={2}
+          color="#fffcf0"
+          position={SUN_POSITION}
+          intensity={2.6}
           castShadow
           shadow-mapSize={[2048, 2048]}
           shadow-radius={10}
-          shadow-intensity={0.75}
           shadow-bias={-0.0004}
           shadow-normalBias={0.05}
         >
-          <orthographicCamera attach="shadow-camera" args={[-230, 230, 230, -230, 10, 900]} />
+          <orthographicCamera attach="shadow-camera" args={[-240, 240, 240, -240, 10, 900]} />
         </directionalLight>
-        {/* Low fill from the camera side lifts the shaded south/east facades without touching shadow contrast. */}
-        <directionalLight color="#f6e9d2" position={[220, 110, 260]} intensity={0.7} />
         <Ground />
         {site.buildings.map((b) => (
           <BuildingMesh key={b.id} b={b} mats={materials[kindOf(b)]} morphRef={morphRef} />
@@ -849,7 +890,7 @@ export function Scene({ morphRef }: { morphRef: MorphRef }) {
         {ANNOTATIONS.map((a) => (
           <Leader key={a.title} a={a} morphRef={morphRef} />
         ))}
-        <Rig morphRef={morphRef} controlsRef={controlsRef} />
+        <Rig morphRef={morphRef} controlsRef={controlsRef} northRef={northRef} />
         <OrbitControls
           ref={controlsRef}
           enabled={false}

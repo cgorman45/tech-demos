@@ -6,7 +6,7 @@ import { useRef, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { MorphControl } from "@/components/morph-control";
 import { PlanInset } from "@/components/plan-inset";
-import type { MorphState } from "@/components/scene";
+import type { MorphState, NorthRef } from "@/components/scene";
 
 const Scene = dynamic(
   () => import("@/components/scene").then((m) => m.Scene),
@@ -34,6 +34,7 @@ export function Lab() {
   const initial = initialMorph(useSearchParams().get("morph"));
   const [morph, setMorph] = useState(initial);
   const morphRef = useRef<MorphState>({ target: initial, smooth: initial });
+  const northRef: NorthRef = useRef<SVGSVGElement | null>(null);
 
   const set = (v: number) => {
     setMorph(v);
@@ -43,7 +44,7 @@ export function Lab() {
   return (
     <div className="flex flex-col gap-4">
       <div className="relative h-[600px] overflow-hidden rounded-sm border border-border bg-background">
-        <Scene morphRef={morphRef} />
+        <Scene morphRef={morphRef} northRef={northRef} />
         <div
           className="pointer-events-none absolute inset-0 z-[1]"
           style={{
@@ -55,11 +56,12 @@ export function Lab() {
             {morph < 0.5 ? "Plan — Site Schematic" : "Massing — Extruded"}
           </div>
           <div className="sheet-label pl-0.5 text-[8px]">
-            {morph < 0.5 ? "Top · North up" : "Axonometric — from the south east"}
+            {morph < 0.5 ? "Top · North up" : "Aerial perspective — from the south east"}
           </div>
         </div>
         <svg
-          className="pointer-events-none absolute right-3 top-3 z-20 h-10 w-10 text-foreground"
+          ref={northRef}
+          className="pointer-events-none absolute right-3 top-3 z-20 h-10 w-10 origin-center text-foreground"
           viewBox="0 0 40 40"
           aria-label="North"
         >
