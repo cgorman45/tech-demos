@@ -1,32 +1,31 @@
-# React + TypeScript + Vite
+# Openship Topology Lab
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+An interactive, single-page map of a mock multi-service app. Pan and zoom around eight services (web, api, worker, cron, postgres, redis, queue, object storage), click any node to inspect its image, port, uptime, env var names, and mock logs, and use Restart / Stop / Start to watch the graph react live — stopping a dependency flips its dependents (transitively) to `degraded`, and starting it recovers them.
 
-Currently, two official plugins are available:
+Everything is mocked locally: there is no Openship install, no Docker, and no network calls. Metrics tick from a small random-walk generator and logs are canned per service kind.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+## Credit
 
-## React Compiler
+Inspired by the Topology view shipped in [Openship 0.8](https://x.com/openshipio/status/2104187404533838043) — see the [Openship repo](https://github.com/oblien/openship). This demo just recreates the vibe of that feature with fake data.
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+## Run it
 
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```sh
+cd apps/openship-topology-lab
+bun install
+bun run dev
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+Then open the printed URL (default http://localhost:5173).
+
+## Tests
+
+Store transition tests (stop propagates `degraded`, start restores, restart cycles) run with:
+
+```sh
+bun test
+```
+
+## Stack
+
+Bun · Vite + React + TypeScript · @xyflow/react (canvas, minimap, controls) · @dagrejs/dagre (auto-layout) · Zustand (store) · shadcn/ui + Tailwind (Sheet, Button, Badge, ScrollArea).

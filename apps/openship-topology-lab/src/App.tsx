@@ -1,122 +1,67 @@
-import { useState } from 'react'
-import heroImg from './assets/hero.png'
-import reactLogo from './assets/react.svg'
-import viteLogo from './assets/vite.svg'
-import './App.css'
+import { useEffect } from "react";
+import { RotateCcw, Ship } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { TopologyCanvas } from "@/components/topology/topology-canvas";
+import { InspectPanel } from "@/components/inspect-panel";
+import { SERVICES } from "@/data/topology";
+import { useTopologyStore } from "@/store/topology-store";
 
-function App() {
-  const [count, setCount] = useState(0)
+const LEGEND = [
+  { label: "running", className: "bg-emerald-400" },
+  { label: "restarting", className: "bg-sky-400" },
+  { label: "degraded", className: "bg-amber-400" },
+  { label: "stopped", className: "bg-zinc-500" },
+];
+
+export default function App() {
+  const tick = useTopologyStore((s) => s.tick);
+  const resetScenario = useTopologyStore((s) => s.resetScenario);
+  const statuses = useTopologyStore((s) => s.statuses);
+
+  useEffect(() => {
+    const interval = setInterval(tick, 1500);
+    return () => clearInterval(interval);
+  }, [tick]);
+
+  const runningCount = SERVICES.filter((s) => statuses[s.id] === "running").length;
 
   return (
-    <>
-      <section id="center">
-        <div className="hero">
-          <img src={heroImg} className="base" width="170" height="179" alt="" />
-          <img src={reactLogo} className="framework" alt="React logo" />
-          <img src={viteLogo} className="vite" alt="Vite logo" />
+    <div className="flex h-dvh flex-col bg-background text-foreground">
+      <header className="flex items-center gap-4 border-b border-border px-5 py-3">
+        <div className="flex items-center gap-2.5">
+          <div className="flex size-8 items-center justify-center rounded-lg bg-primary text-primary-foreground">
+            <Ship className="size-4" />
+          </div>
+          <div>
+            <h1 className="text-sm font-semibold leading-tight">Openship Topology Lab</h1>
+            <p className="text-[11px] leading-tight text-muted-foreground">
+              mock service map · {runningCount}/{SERVICES.length} running
+            </p>
+          </div>
         </div>
-        <div>
-          <h1>Get started</h1>
-          <p>
-            Edit <code>src/App.tsx</code> and save to test <code>HMR</code>
-          </p>
-        </div>
-        <button
-          type="button"
-          className="counter"
-          onClick={() => setCount((count) => count + 1)}
-        >
-          Count is {count}
-        </button>
-      </section>
 
-      <div className="ticks"></div>
-
-      <section id="next-steps">
-        <div id="docs">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#documentation-icon"></use>
-          </svg>
-          <h2>Documentation</h2>
-          <p>Your questions, answered</p>
-          <ul>
-            <li>
-              <a href="https://vite.dev/" target="_blank">
-                <img className="logo" src={viteLogo} alt="" />
-                Explore Vite
-              </a>
-            </li>
-            <li>
-              <a href="https://react.dev/" target="_blank">
-                <img className="button-icon" src={reactLogo} alt="" />
-                Learn more
-              </a>
-            </li>
-          </ul>
+        <div className="ml-auto hidden items-center gap-3 md:flex">
+          {LEGEND.map((item) => (
+            <span
+              key={item.label}
+              className="flex items-center gap-1.5 text-[11px] text-muted-foreground"
+            >
+              <span className={`size-2 rounded-full ${item.className}`} />
+              {item.label}
+            </span>
+          ))}
         </div>
-        <div id="social">
-          <svg className="icon" role="presentation" aria-hidden="true">
-            <use href="/icons.svg#social-icon"></use>
-          </svg>
-          <h2>Connect with us</h2>
-          <p>Join the Vite community</p>
-          <ul>
-            <li>
-              <a href="https://github.com/vitejs/vite" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#github-icon"></use>
-                </svg>
-                GitHub
-              </a>
-            </li>
-            <li>
-              <a href="https://chat.vite.dev/" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#discord-icon"></use>
-                </svg>
-                Discord
-              </a>
-            </li>
-            <li>
-              <a href="https://x.com/vite_js" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#x-icon"></use>
-                </svg>
-                X.com
-              </a>
-            </li>
-            <li>
-              <a href="https://bsky.app/profile/vite.dev" target="_blank">
-                <svg
-                  className="button-icon"
-                  role="presentation"
-                  aria-hidden="true"
-                >
-                  <use href="/icons.svg#bluesky-icon"></use>
-                </svg>
-                Bluesky
-              </a>
-            </li>
-          </ul>
-        </div>
-      </section>
 
-      <div className="ticks"></div>
-      <section id="spacer"></section>
-    </>
-  )
+        <Button size="sm" variant="outline" onClick={resetScenario}>
+          <RotateCcw data-icon="inline-start" /> Reset scenario
+        </Button>
+      </header>
+
+      <main className="min-h-0 flex-1">
+        <TopologyCanvas />
+      </main>
+
+      <InspectPanel />
+    </div>
+  );
 }
-
-export default App
