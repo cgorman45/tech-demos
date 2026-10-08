@@ -117,6 +117,15 @@
     --sidebar-ring: oklch(0.556 0 0);
 }
 
+/* Dark mission-control palette: near-black navy instead of neutral grey. */
+.dark {
+    --background: #070b14;
+    --card: #0b1322;
+    --popover: #0b1322;
+    --border: oklch(0.85 0.03 255 / 14%);
+    --input: oklch(0.85 0.03 255 / 18%);
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
@@ -127,4 +136,9 @@
   html {
     @apply font-sans;
     }
+}
+
+/* Keep the React Flow pane transparent so the navy canvas shows through. */
+.react-flow {
+  background: transparent;
 }
