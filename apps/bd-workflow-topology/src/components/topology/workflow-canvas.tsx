@@ -126,7 +126,6 @@ export function WorkflowCanvas() {
         nodesDraggable={editMode}
         nodesConnectable={false}
         deleteKeyCode={null}
-        proOptions={{ hideAttribution: true }}
       >
         <Background variant={BackgroundVariant.Dots} gap={24} size={1.1} color="#1e293b" />
         <Controls position="bottom-left" showInteractive={false} />
