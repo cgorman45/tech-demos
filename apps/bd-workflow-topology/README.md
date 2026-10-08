@@ -12,10 +12,15 @@ bun run dev
 Then open the printed local URL. Other scripts:
 
 ```sh
-bun test        # store tests
-bun run build   # type check and production build
-bun run lint    # oxlint
+bun test              # store tests
+bun run build         # type check and production build
+bun run build:single  # one self-contained HTML file (colton-bd-workflow.html)
+bun run lint          # oxlint
 ```
+
+## Open it locally
+
+No install and no server needed. Download `colton-bd-workflow.html` from this folder and double-click it. It opens in any modern browser from the file system, with all code, styles, and fonts inlined, and needs no network. Edit mode changes are saved by the browser and survive a reload of the file.
 
 ## What this shows
 
