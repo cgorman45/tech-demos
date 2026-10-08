@@ -60,6 +60,8 @@ interface WorkflowStore {
   edits: Edits;
   /** Bumped by resetLayout so the canvas rebuilds node positions. */
   layoutVersion: number;
+  /** Full-screen Proposal drafting drill-down. */
+  draftingOpen: boolean;
 
   stopNode: (id: string) => void;
   startNode: (id: string) => void;
@@ -69,6 +71,8 @@ interface WorkflowStore {
   resetScenario: () => void;
   select: (id: string | null) => void;
   toggleEditMode: () => void;
+  openDrafting: () => void;
+  closeDrafting: () => void;
   renameNode: (id: string, patch: { name?: string; subtitle?: string }) => void;
   setNodePosition: (id: string, position: { x: number; y: number }) => void;
   setMetricValue: (id: string, key: string, value: number) => void;
@@ -172,6 +176,7 @@ export const useWorkflowStore = create<WorkflowStore>()((set, get) => ({
   editMode: false,
   edits: persistedEdits,
   layoutVersion: 0,
+  draftingOpen: false,
 
   stopNode: (id) => {
     cancelRestartTimer(id);
@@ -397,12 +402,21 @@ export const useWorkflowStore = create<WorkflowStore>()((set, get) => ({
     for (const id of restartTimers.keys()) cancelRestartTimer(id);
     cancelRunTimer();
     // Keeps Edit mode and saved edits; Reset layout clears those.
-    set({ ...initialState(get().edits), selectedId: null, stepMs: DEFAULT_STEP_MS });
+    set({
+      ...initialState(get().edits),
+      selectedId: null,
+      stepMs: DEFAULT_STEP_MS,
+      draftingOpen: false,
+    });
   },
 
   select: (id) => set({ selectedId: id }),
 
   toggleEditMode: () => set({ editMode: !get().editMode }),
+
+  openDrafting: () => set({ draftingOpen: true, selectedId: null }),
+
+  closeDrafting: () => set({ draftingOpen: false }),
 
   renameNode: (id, patch) => {
     const state = get();

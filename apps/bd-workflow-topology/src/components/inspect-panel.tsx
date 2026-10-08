@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { Play, RotateCw, Square } from "lucide-react";
+import { Play, PlayCircle, RotateCw, Square } from "lucide-react";
 import { cn } from "cn";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -31,6 +31,7 @@ export function InspectPanel() {
   const editMode = useWorkflowStore((s) => s.editMode);
   const renameNode = useWorkflowStore((s) => s.renameNode);
   const setMetricValue = useWorkflowStore((s) => s.setMetricValue);
+  const openDrafting = useWorkflowStore((s) => s.openDrafting);
   const displayName = useWorkflowStore((s) =>
     s.selectedId ? nodeName(s.edits, s.selectedId) : null,
   );
@@ -97,6 +98,14 @@ export function InspectPanel() {
                 </>
               )}
             </div>
+
+            {spec.id === "proposal" && (
+              <div className="px-4">
+                <Button size="sm" className="w-full" variant="secondary" onClick={openDrafting}>
+                  <PlayCircle data-icon="inline-start" /> Open drafting animation
+                </Button>
+              </div>
+            )}
 
             <Separator />
 

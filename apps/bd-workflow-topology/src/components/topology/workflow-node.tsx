@@ -9,6 +9,7 @@ import {
   Mail,
   NotebookPen,
   Phone,
+  PlayCircle,
   Presentation,
   Radar,
   SlidersHorizontal,
@@ -173,6 +174,15 @@ function WorkflowNodeInner({ data }: NodeProps<WorkflowFlowNode>) {
           </span>
         )}
       </div>
+
+      {nodeId === "proposal" && !editMode && (
+        <div
+          className="mt-2 flex items-center gap-1.5 text-[10px] font-medium"
+          style={{ color: lane.color }}
+        >
+          <PlayCircle className="size-3" /> Open drafting animation
+        </div>
+      )}
     </div>
   );
 }

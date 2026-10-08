@@ -1,10 +1,20 @@
+import { useEffect } from "react";
 import { ReactFlowProvider } from "@xyflow/react";
 import { ActivityLog } from "@/components/activity-log";
+import { DraftingOverlay } from "@/components/drafting/drafting-overlay";
 import { InspectPanel } from "@/components/inspect-panel";
 import { TopBar } from "@/components/top-bar";
 import { WorkflowCanvas } from "@/components/topology/workflow-canvas";
+import { useWorkflowStore } from "@/store/workflow-store";
 
 export default function App() {
+  // Deep link straight into the drafting animation.
+  useEffect(() => {
+    if (window.location.hash === "#drafting") {
+      useWorkflowStore.getState().openDrafting();
+    }
+  }, []);
+
   return (
     <ReactFlowProvider>
       <div className="flex h-dvh flex-col bg-background text-foreground">
@@ -24,6 +34,7 @@ export default function App() {
           <ActivityLog />
         </main>
         <InspectPanel />
+        <DraftingOverlay />
       </div>
     </ReactFlowProvider>
   );

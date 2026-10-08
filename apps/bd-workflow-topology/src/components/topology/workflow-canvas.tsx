@@ -67,6 +67,7 @@ export function WorkflowCanvas() {
   const editMode = useWorkflowStore((s) => s.editMode);
   const layoutVersion = useWorkflowStore((s) => s.layoutVersion);
   const setNodePosition = useWorkflowStore((s) => s.setNodePosition);
+  const openDrafting = useWorkflowStore((s) => s.openDrafting);
 
   // Reset layout rebuilds positions from the saved (now cleared) edits.
   useEffect(() => {
@@ -112,7 +113,14 @@ export function WorkflowCanvas() {
         edgeTypes={edgeTypes}
         onNodesChange={onNodesChange}
         onNodeClick={(_, node) => {
-          if (node.type === "step") select(node.id);
+          if (node.type !== "step") return;
+          // Proposal drafting opens its drill-down animation, except in
+          // edit mode, where clicking is for dragging and renaming.
+          if (node.id === "proposal" && !editMode) {
+            openDrafting();
+            return;
+          }
+          select(node.id);
         }}
         onNodeDragStop={(_, node) => {
           if (node.type === "step") setNodePosition(node.id, node.position);

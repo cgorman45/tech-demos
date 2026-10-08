@@ -150,6 +150,24 @@ describe("resetScenario", () => {
   });
 });
 
+describe("drafting overlay", () => {
+  test("openDrafting opens the overlay and clears the node selection", () => {
+    store().select("proposal");
+    store().openDrafting();
+    expect(store().draftingOpen).toBe(true);
+    expect(store().selectedId).toBeNull();
+
+    store().closeDrafting();
+    expect(store().draftingOpen).toBe(false);
+  });
+
+  test("resetScenario closes the overlay", () => {
+    store().openDrafting();
+    store().resetScenario();
+    expect(store().draftingOpen).toBe(false);
+  });
+});
+
 describe("edit mode", () => {
   test("renameNode changes the name used by new log lines", () => {
     store().renameNode("kb", { name: "Shared proposal library" });
