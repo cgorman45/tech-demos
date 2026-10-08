@@ -25,7 +25,7 @@ import {
 } from "@/data/workflow";
 import { formatMetric } from "@/lib/mock";
 import { STATUS_META } from "@/lib/status";
-import { useWorkflowStore } from "@/store/workflow-store";
+import { nodeName, nodeSubtitle, useWorkflowStore } from "@/store/workflow-store";
 import { KB_HEIGHT, KB_WIDTH, NODE_WIDTH } from "@/components/topology/layout";
 
 export type WorkflowFlowNode = Node<{ nodeId: string }, "step">;
@@ -75,6 +75,9 @@ function WorkflowNodeInner({ data }: NodeProps<WorkflowFlowNode>) {
       KB_FED.has(s.run.activeNodeId) &&
       s.statuses.kb === "running",
   );
+  const editMode = useWorkflowStore((s) => s.editMode);
+  const displayName = useWorkflowStore((s) => nodeName(s.edits, nodeId));
+  const displaySubtitle = useWorkflowStore((s) => nodeSubtitle(s.edits, nodeId));
 
   const Icon = ICONS[spec.icon];
   const meta = STATUS_META[status];
@@ -104,6 +107,7 @@ function WorkflowNodeInner({ data }: NodeProps<WorkflowFlowNode>) {
         stopped && "opacity-55 saturate-0",
         status === "restarting" && "animate-pulse",
         isStalledHere && "animate-pulse",
+        editMode && "cursor-grab border-dashed",
       )}
       style={{
         width,
@@ -138,16 +142,16 @@ function WorkflowNodeInner({ data }: NodeProps<WorkflowFlowNode>) {
         <div className="min-w-0 flex-1">
           <div
             className={cn(
-              "truncate font-medium text-foreground",
+              "line-clamp-2 font-medium leading-snug text-foreground",
               spec.emphasis ? "text-sm" : "text-[13px]",
             )}
-            title={spec.name}
+            title={displayName}
           >
-            {spec.name}
+            {displayName}
           </div>
-          {spec.subtitle && (
-            <div className="truncate text-[10px] text-muted-foreground" title={spec.subtitle}>
-              {spec.subtitle}
+          {displaySubtitle && (
+            <div className="truncate text-[10px] text-muted-foreground" title={displaySubtitle}>
+              {displaySubtitle}
             </div>
           )}
         </div>

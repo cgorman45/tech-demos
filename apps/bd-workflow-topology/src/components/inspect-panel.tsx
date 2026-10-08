@@ -12,10 +12,12 @@ import {
   SheetHeader,
   SheetTitle,
 } from "@/components/ui/sheet";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { LANE_BY_ID, NODE_BY_ID } from "@/data/workflow";
 import { formatClock, formatMetric } from "@/lib/mock";
 import { STATUS_META } from "@/lib/status";
-import { useWorkflowStore } from "@/store/workflow-store";
+import { nodeName, nodeSubtitle, useWorkflowStore } from "@/store/workflow-store";
 
 export function InspectPanel() {
   const selectedId = useWorkflowStore((s) => s.selectedId);
@@ -26,6 +28,15 @@ export function InspectPanel() {
   const stopNode = useWorkflowStore((s) => s.stopNode);
   const startNode = useWorkflowStore((s) => s.startNode);
   const restartNode = useWorkflowStore((s) => s.restartNode);
+  const editMode = useWorkflowStore((s) => s.editMode);
+  const renameNode = useWorkflowStore((s) => s.renameNode);
+  const setMetricValue = useWorkflowStore((s) => s.setMetricValue);
+  const displayName = useWorkflowStore((s) =>
+    s.selectedId ? nodeName(s.edits, s.selectedId) : null,
+  );
+  const displaySubtitle = useWorkflowStore((s) =>
+    s.selectedId ? (nodeSubtitle(s.edits, s.selectedId) ?? "") : "",
+  );
 
   const logsEndRef = useRef<HTMLDivElement>(null);
   const logCount = logs?.length ?? 0;
@@ -46,7 +57,7 @@ export function InspectPanel() {
           <>
             <SheetHeader>
               <SheetTitle className="flex flex-wrap items-center gap-2">
-                {spec.name}
+                {displayName}
                 <Badge variant="outline" className={cn("gap-1.5", meta.text)}>
                   <span className={cn("size-1.5 rounded-full", meta.dot)} />
                   {meta.label}
@@ -88,6 +99,51 @@ export function InspectPanel() {
             </div>
 
             <Separator />
+
+            {editMode && (
+              <>
+                <div className="space-y-3 px-4">
+                  <div className="text-xs font-medium text-muted-foreground">Edit step</div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="edit-name" className="text-xs">
+                      Name
+                    </Label>
+                    <Input
+                      id="edit-name"
+                      value={displayName ?? ""}
+                      onChange={(e) => renameNode(spec.id, { name: e.target.value })}
+                    />
+                  </div>
+                  <div className="space-y-1.5">
+                    <Label htmlFor="edit-subtitle" className="text-xs">
+                      Subtitle
+                    </Label>
+                    <Input
+                      id="edit-subtitle"
+                      value={displaySubtitle}
+                      onChange={(e) => renameNode(spec.id, { subtitle: e.target.value })}
+                    />
+                  </div>
+                  {spec.metrics.map((metric) => (
+                    <div key={metric.key} className="space-y-1.5">
+                      <Label htmlFor={`edit-metric-${metric.key}`} className="text-xs">
+                        {metric.label}
+                      </Label>
+                      <Input
+                        id={`edit-metric-${metric.key}`}
+                        type="number"
+                        min={0}
+                        value={metrics[metric.key]}
+                        onChange={(e) =>
+                          setMetricValue(spec.id, metric.key, e.target.valueAsNumber)
+                        }
+                      />
+                    </div>
+                  ))}
+                </div>
+                <Separator />
+              </>
+            )}
 
             <div className="flex flex-wrap items-center gap-2 px-4 text-xs">
               <span className="text-muted-foreground">Lane</span>

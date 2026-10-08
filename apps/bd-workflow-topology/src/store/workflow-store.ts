@@ -19,6 +19,7 @@ import {
   stopLifecycle,
 } from "@/store/transitions";
 import { makeNodeLogs, seedMetrics, type LogLine } from "@/lib/mock";
+import { clearEdits, loadEdits, saveEdits, type Edits, type NodeEdits } from "@/lib/edits";
 
 export const RESTART_MS = 1800;
 export const DEFAULT_STEP_MS = 1000;
@@ -55,6 +56,10 @@ interface WorkflowStore {
   run: RunState;
   /** Run step duration in ms. Tests set 0 and drive advanceRun directly. */
   stepMs: number;
+  editMode: boolean;
+  edits: Edits;
+  /** Bumped by resetLayout so the canvas rebuilds node positions. */
+  layoutVersion: number;
 
   stopNode: (id: string) => void;
   startNode: (id: string) => void;
@@ -63,6 +68,30 @@ interface WorkflowStore {
   advanceRun: () => void;
   resetScenario: () => void;
   select: (id: string | null) => void;
+  toggleEditMode: () => void;
+  renameNode: (id: string, patch: { name?: string; subtitle?: string }) => void;
+  setNodePosition: (id: string, position: { x: number; y: number }) => void;
+  setMetricValue: (id: string, key: string, value: number) => void;
+  resetLayout: () => void;
+}
+
+/** Current display name of a node, honoring Edit mode renames. */
+export function nodeName(edits: Edits, id: string): string {
+  return edits[id]?.name ?? NODE_BY_ID[id].name;
+}
+
+/** Current display subtitle of a node, honoring Edit mode renames. */
+export function nodeSubtitle(edits: Edits, id: string): string | undefined {
+  return edits[id]?.subtitle ?? NODE_BY_ID[id].subtitle;
+}
+
+function metricsWithEdits(edits: Edits): Record<string, Record<string, number>> {
+  const metrics = seedMetrics();
+  for (const [id, nodeEdits] of Object.entries(edits)) {
+    if (nodeEdits.metrics === undefined || metrics[id] === undefined) continue;
+    metrics[id] = { ...metrics[id], ...nodeEdits.metrics };
+  }
+  return metrics;
 }
 
 const restartTimers = new Map<string, ReturnType<typeof setTimeout>>();
@@ -91,7 +120,7 @@ const IDLE_RUN: RunState = {
   activeEdgeId: null,
 };
 
-function initialState() {
+function initialState(edits: Edits) {
   const now = Date.now();
   const lifecycle: Record<string, Lifecycle> = {};
   for (const node of NODES) lifecycle[node.id] = "running";
@@ -99,7 +128,7 @@ function initialState() {
   return {
     lifecycle,
     statuses: deriveStatuses(lifecycle, EDGES),
-    metrics: seedMetrics(),
+    metrics: metricsWithEdits(edits),
     hoursSavedTotal,
     nodeLogs: makeNodeLogs(now),
     activity: [
@@ -134,10 +163,15 @@ function appendActivity(
   return [...activity, { ...entry, id: ++activitySeq }].slice(-MAX_ACTIVITY_ENTRIES);
 }
 
+const persistedEdits = loadEdits();
+
 export const useWorkflowStore = create<WorkflowStore>()((set, get) => ({
-  ...initialState(),
+  ...initialState(persistedEdits),
   selectedId: null,
   stepMs: DEFAULT_STEP_MS,
+  editMode: false,
+  edits: persistedEdits,
+  layoutVersion: 0,
 
   stopNode: (id) => {
     cancelRestartTimer(id);
@@ -145,7 +179,7 @@ export const useWorkflowStore = create<WorkflowStore>()((set, get) => ({
     if (state.lifecycle[id] === "stopped") return;
     const now = Date.now();
     const lifecycle = stopLifecycle(state.lifecycle, id);
-    const name = NODE_BY_ID[id].name;
+    const name = nodeName(state.edits, id);
     set({
       lifecycle,
       statuses: deriveStatuses(lifecycle, EDGES),
@@ -170,7 +204,7 @@ export const useWorkflowStore = create<WorkflowStore>()((set, get) => ({
     if (state.lifecycle[id] === "running") return;
     const now = Date.now();
     const lifecycle = startLifecycle(state.lifecycle, id);
-    const name = NODE_BY_ID[id].name;
+    const name = nodeName(state.edits, id);
     set({
       lifecycle,
       statuses: deriveStatuses(lifecycle, EDGES),
@@ -196,7 +230,7 @@ export const useWorkflowStore = create<WorkflowStore>()((set, get) => ({
 
     const now = Date.now();
     const lifecycle = beginRestartLifecycle(state.lifecycle, id);
-    const name = NODE_BY_ID[id].name;
+    const name = nodeName(state.edits, id);
     set({
       lifecycle,
       statuses: deriveStatuses(lifecycle, EDGES),
@@ -265,7 +299,7 @@ export const useWorkflowStore = create<WorkflowStore>()((set, get) => ({
     if (state.run.status !== "running") return;
 
     const nodeId = RUN_PATH[state.run.stepIndex];
-    const node = NODE_BY_ID[nodeId];
+    const currentName = nodeName(state.edits, nodeId);
     const now = Date.now();
 
     if (state.statuses[nodeId] !== "running") {
@@ -274,11 +308,11 @@ export const useWorkflowStore = create<WorkflowStore>()((set, get) => ({
         state.statuses[nodeId] === "stopped"
           ? nodeId
           : (findStoppedUpstream(nodeId, state.lifecycle, EDGES) ?? nodeId);
-      const culprit = NODE_BY_ID[culpritId].name;
+      const culprit = nodeName(state.edits, culpritId);
       const message =
         culpritId === nodeId
-          ? `Lead stalled at ${node.name}: the step is stopped.`
-          : `Lead stalled at ${node.name}: ${culprit} is offline.`;
+          ? `Lead stalled at ${currentName}: the step is stopped.`
+          : `Lead stalled at ${currentName}: ${culprit} is offline.`;
       set({
         run: {
           status: "stalled",
@@ -306,7 +340,7 @@ export const useWorkflowStore = create<WorkflowStore>()((set, get) => ({
     let activity = appendActivity(state.activity, {
       ts: now,
       nodeId,
-      title: node.name,
+      title: currentName,
       lines: SAMPLE_OUTPUT[nodeId],
       kind: "run",
     });
@@ -362,8 +396,71 @@ export const useWorkflowStore = create<WorkflowStore>()((set, get) => ({
   resetScenario: () => {
     for (const id of restartTimers.keys()) cancelRestartTimer(id);
     cancelRunTimer();
-    set({ ...initialState(), selectedId: null, stepMs: DEFAULT_STEP_MS });
+    // Keeps Edit mode and saved edits; Reset layout clears those.
+    set({ ...initialState(get().edits), selectedId: null, stepMs: DEFAULT_STEP_MS });
   },
 
   select: (id) => set({ selectedId: id }),
+
+  toggleEditMode: () => set({ editMode: !get().editMode }),
+
+  renameNode: (id, patch) => {
+    const state = get();
+    const current: NodeEdits = state.edits[id] ?? {};
+    const next: NodeEdits = { ...current };
+    if (patch.name !== undefined) {
+      if (patch.name.trim() === "" || patch.name === NODE_BY_ID[id].name) {
+        delete next.name;
+      } else {
+        next.name = patch.name;
+      }
+    }
+    if (patch.subtitle !== undefined) {
+      if (patch.subtitle === (NODE_BY_ID[id].subtitle ?? "")) {
+        delete next.subtitle;
+      } else {
+        next.subtitle = patch.subtitle;
+      }
+    }
+    const edits = { ...state.edits, [id]: next };
+    saveEdits(edits);
+    set({ edits });
+  },
+
+  setNodePosition: (id, position) => {
+    const state = get();
+    const edits = { ...state.edits, [id]: { ...state.edits[id], position } };
+    saveEdits(edits);
+    set({ edits });
+  },
+
+  setMetricValue: (id, key, value) => {
+    const state = get();
+    const safe = Number.isFinite(value) ? Math.max(0, Math.round(value)) : 0;
+    const edits = {
+      ...state.edits,
+      [id]: {
+        ...state.edits[id],
+        metrics: { ...state.edits[id]?.metrics, [key]: safe },
+      },
+    };
+    saveEdits(edits);
+    set({
+      edits,
+      metrics: { ...state.metrics, [id]: { ...state.metrics[id], [key]: safe } },
+    });
+  },
+
+  resetLayout: () => {
+    const state = get();
+    clearEdits();
+    // Revert edited metric values to their seeds without touching run counters.
+    const metrics = { ...state.metrics };
+    for (const [id, nodeEdits] of Object.entries(state.edits)) {
+      if (nodeEdits.metrics === undefined) continue;
+      const seeds = Object.fromEntries(NODE_BY_ID[id].metrics.map((m) => [m.key, m.seed]));
+      metrics[id] = { ...metrics[id], ...seeds };
+    }
+    set({ edits: {}, metrics, layoutVersion: state.layoutVersion + 1 });
+  },
 }));

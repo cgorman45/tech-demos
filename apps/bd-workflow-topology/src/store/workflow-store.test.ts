@@ -1,12 +1,13 @@
 import { beforeEach, describe, expect, test } from "bun:test";
-import { COMPLETION_TICKS, NODES, RUN_PATH } from "@/data/workflow";
-import { useWorkflowStore } from "@/store/workflow-store";
+import { COMPLETION_TICKS, NODES, NODE_BY_ID, RUN_PATH } from "@/data/workflow";
+import { nodeName, useWorkflowStore } from "@/store/workflow-store";
 
 function store() {
   return useWorkflowStore.getState();
 }
 
 beforeEach(() => {
+  store().resetLayout();
   store().resetScenario();
   useWorkflowStore.setState({ stepMs: 0 });
 });
@@ -134,11 +135,72 @@ describe("resetScenario", () => {
     expect(state.selectedId).toBeNull();
   });
 
+  test("keeps saved edits so they survive a scenario reset", () => {
+    store().renameNode("kb", { name: "Shared proposal library" });
+    store().resetScenario();
+    expect(nodeName(store().edits, "kb")).toBe("Shared proposal library");
+  });
+
   test("clears a pending restart timer", async () => {
     store().restartNode("granola", 20);
     store().resetScenario();
     await new Promise((resolve) => setTimeout(resolve, 60));
     expect(store().statuses.granola).toBe("running");
     expect(store().nodeLogs.granola.every((l) => l.message !== "Restart complete. Back online.")).toBe(true);
+  });
+});
+
+describe("edit mode", () => {
+  test("renameNode changes the name used by new log lines", () => {
+    store().renameNode("kb", { name: "Shared proposal library" });
+    store().stopNode("kb");
+
+    const stopEntry = store().activity.findLast((e) => e.kind === "lifecycle");
+    expect(stopEntry?.title).toBe("Shared proposal library");
+    expect(stopEntry?.lines[0]).toContain("Shared proposal library stopped");
+
+    store().renameNode("proposal", { name: "Draft studio" });
+    store().runLead();
+    store().advanceRun();
+    store().advanceRun();
+
+    const stall = store().activity.findLast((e) => e.kind === "stall");
+    expect(store().run.status).toBe("stalled");
+    expect(stall?.lines[0]).toBe(
+      "Lead stalled at Draft studio: Shared proposal library is offline.",
+    );
+  });
+
+  test("renaming back to the default or to an empty name clears the override", () => {
+    store().renameNode("kb", { name: "Shared proposal library" });
+    store().renameNode("kb", { name: NODE_BY_ID.kb.name });
+    expect(store().edits.kb?.name).toBeUndefined();
+
+    store().renameNode("kb", { name: "   " });
+    expect(nodeName(store().edits, "kb")).toBe(NODE_BY_ID.kb.name);
+  });
+
+  test("setMetricValue updates the live metric and survives a scenario reset", () => {
+    store().setMetricValue("scanner", "rfpsFlagged", 99);
+    expect(store().metrics.scanner.rfpsFlagged).toBe(99);
+    store().resetScenario();
+    expect(store().metrics.scanner.rfpsFlagged).toBe(99);
+  });
+
+  test("resetLayout clears renames, subtitles, positions, and edited metrics", () => {
+    store().renameNode("kb", { name: "Shared proposal library", subtitle: "All of it" });
+    store().setNodePosition("kb", { x: 1, y: 2 });
+    store().setMetricValue("scanner", "rfpsFlagged", 99);
+    const versionBefore = store().layoutVersion;
+
+    store().resetLayout();
+
+    const state = store();
+    expect(state.edits).toEqual({});
+    expect(nodeName(state.edits, "kb")).toBe(NODE_BY_ID.kb.name);
+    expect(state.metrics.scanner.rfpsFlagged).toBe(
+      NODE_BY_ID.scanner.metrics[0].seed,
+    );
+    expect(state.layoutVersion).toBe(versionBefore + 1);
   });
 });

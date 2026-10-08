@@ -1,4 +1,4 @@
-import { Maximize, Play, RotateCcw, Workflow } from "lucide-react";
+import { Maximize, Pencil, Play, RotateCcw, Undo2, Workflow } from "lucide-react";
 import { useReactFlow } from "@xyflow/react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -11,6 +11,9 @@ export function TopBar() {
   const hoursSavedTotal = useWorkflowStore((s) => s.hoursSavedTotal);
   const runLead = useWorkflowStore((s) => s.runLead);
   const resetScenario = useWorkflowStore((s) => s.resetScenario);
+  const editMode = useWorkflowStore((s) => s.editMode);
+  const toggleEditMode = useWorkflowStore((s) => s.toggleEditMode);
+  const resetLayout = useWorkflowStore((s) => s.resetLayout);
   const { fitView } = useReactFlow();
 
   const running = runStatus === "running";
@@ -54,6 +57,19 @@ export function TopBar() {
         <Button size="sm" variant="outline" onClick={resetScenario}>
           <RotateCcw data-icon="inline-start" /> Reset scenario
         </Button>
+        <Button
+          size="sm"
+          variant={editMode ? "default" : "outline"}
+          aria-pressed={editMode}
+          onClick={toggleEditMode}
+        >
+          <Pencil data-icon="inline-start" /> Edit mode
+        </Button>
+        {editMode && (
+          <Button size="sm" variant="outline" onClick={resetLayout}>
+            <Undo2 data-icon="inline-start" /> Reset layout
+          </Button>
+        )}
       </div>
     </header>
   );

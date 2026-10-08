@@ -1,4 +1,4 @@
-import { useMemo } from "react";
+import { useEffect, useMemo } from "react";
 import {
   Background,
   BackgroundVariant,
@@ -33,7 +33,7 @@ const edgeTypes: EdgeTypes = { token: TokenEdgeComponent };
 
 type CanvasNode = WorkflowFlowNode | LaneBandNode;
 
-function buildInitialNodes(): CanvasNode[] {
+function buildNodes(edits: ReturnType<typeof useWorkflowStore.getState>["edits"]): CanvasNode[] {
   const positions = layoutPositions();
   const bands: LaneBandNode[] = laneBands().map((band) => ({
     id: `lane-${band.laneId}`,
@@ -48,7 +48,7 @@ function buildInitialNodes(): CanvasNode[] {
   const steps: WorkflowFlowNode[] = NODES.map((spec) => ({
     id: spec.id,
     type: "step" as const,
-    position: positions[spec.id],
+    position: edits[spec.id]?.position ?? positions[spec.id],
     data: { nodeId: spec.id },
     zIndex: 1,
   }));
@@ -56,14 +56,23 @@ function buildInitialNodes(): CanvasNode[] {
 }
 
 export function WorkflowCanvas() {
-  const [nodes, , onNodesChange] = useNodesState<CanvasNode>(
-    useMemo(() => buildInitialNodes(), []),
+  const [nodes, setNodes, onNodesChange] = useNodesState<CanvasNode>(
+    useMemo(() => buildNodes(useWorkflowStore.getState().edits), []),
   );
 
   const statuses = useWorkflowStore((s) => s.statuses);
   const run = useWorkflowStore((s) => s.run);
   const stepMs = useWorkflowStore((s) => s.stepMs);
   const select = useWorkflowStore((s) => s.select);
+  const editMode = useWorkflowStore((s) => s.editMode);
+  const layoutVersion = useWorkflowStore((s) => s.layoutVersion);
+  const setNodePosition = useWorkflowStore((s) => s.setNodePosition);
+
+  // Reset layout rebuilds positions from the saved (now cleared) edits.
+  useEffect(() => {
+    if (layoutVersion === 0) return;
+    setNodes(buildNodes(useWorkflowStore.getState().edits));
+  }, [layoutVersion, setNodes]);
 
   const edges = useMemo<TokenFlowEdge[]>(() => {
     const kbEdgeId =
@@ -105,12 +114,16 @@ export function WorkflowCanvas() {
         onNodeClick={(_, node) => {
           if (node.type === "step") select(node.id);
         }}
+        onNodeDragStop={(_, node) => {
+          if (node.type === "step") setNodePosition(node.id, node.position);
+        }}
         onPaneClick={() => select(null)}
         colorMode="dark"
         fitView
         fitViewOptions={FIT_VIEW_OPTIONS}
         minZoom={0.25}
         maxZoom={2}
+        nodesDraggable={editMode}
         nodesConnectable={false}
         deleteKeyCode={null}
         proOptions={{ hideAttribution: true }}
