@@ -1,6 +1,11 @@
-import { beforeEach, describe, expect, test } from "bun:test";
+import { afterEach, beforeEach, describe, expect, test } from "bun:test";
 import { COMPLETION_TICKS, NODES, NODE_BY_ID, RUN_PATH } from "@/data/workflow";
 import { nodeName, useWorkflowStore } from "@/store/workflow-store";
+import {
+  DRAFTING_LABEL_DEFAULTS,
+  draftingLabel,
+  loadDraftingLabels,
+} from "@/components/drafting/labels";
 
 function store() {
   return useWorkflowStore.getState();
@@ -220,5 +225,65 @@ describe("edit mode", () => {
       NODE_BY_ID.scanner.metrics[0].seed,
     );
     expect(state.layoutVersion).toBe(versionBefore + 1);
+  });
+});
+
+describe("drafting labels", () => {
+  // bun test has no localStorage; install a stub so the persistence path runs.
+  const backing = new Map<string, string>();
+  const stub = {
+    getItem: (key: string) => backing.get(key) ?? null,
+    setItem: (key: string, value: string) => void backing.set(key, value),
+    removeItem: (key: string) => void backing.delete(key),
+  };
+
+  beforeEach(() => {
+    backing.clear();
+    (globalThis as Record<string, unknown>).localStorage = stub;
+    store().resetDraftingLabels();
+  });
+
+  afterEach(() => {
+    delete (globalThis as Record<string, unknown>).localStorage;
+  });
+
+  test("setDraftingLabel overrides a label and persists it", () => {
+    store().setDraftingLabel("kb.title", "Shared proposal library");
+    store().setDraftingLabel("step.draft", "Write");
+
+    expect(draftingLabel(store().draftingLabels, "kb.title")).toBe("Shared proposal library");
+    expect(draftingLabel(store().draftingLabels, "step.draft")).toBe("Write");
+    expect(draftingLabel(store().draftingLabels, "pill")).toBe(DRAFTING_LABEL_DEFAULTS.pill);
+
+    // A fresh load from storage sees the same overrides, as after a reload.
+    expect(loadDraftingLabels()).toEqual({
+      "kb.title": "Shared proposal library",
+      "step.draft": "Write",
+    });
+  });
+
+  test("empty or default values clear the override, unknown ids are ignored", () => {
+    store().setDraftingLabel("kb.title", "Shared proposal library");
+    store().setDraftingLabel("kb.title", "   ");
+    expect(store().draftingLabels["kb.title"]).toBeUndefined();
+
+    store().setDraftingLabel("pill", DRAFTING_LABEL_DEFAULTS.pill);
+    expect(store().draftingLabels.pill).toBeUndefined();
+
+    store().setDraftingLabel("no.such.label", "x");
+    expect(store().draftingLabels["no.such.label"]).toBeUndefined();
+  });
+
+  test("resetDraftingLabels restores every default and clears storage", () => {
+    store().setDraftingLabel("kb.title", "Shared proposal library");
+    store().setDraftingLabel("submit.title", "Shipped");
+
+    store().resetDraftingLabels();
+
+    expect(store().draftingLabels).toEqual({});
+    expect(draftingLabel(store().draftingLabels, "kb.title")).toBe(
+      DRAFTING_LABEL_DEFAULTS["kb.title"],
+    );
+    expect(loadDraftingLabels()).toEqual({});
   });
 });

@@ -20,6 +20,12 @@ import {
 } from "@/store/transitions";
 import { makeNodeLogs, seedMetrics, type LogLine } from "@/lib/mock";
 import { clearEdits, loadEdits, saveEdits, type Edits, type NodeEdits } from "@/lib/edits";
+import {
+  DRAFTING_LABEL_DEFAULTS,
+  clearDraftingLabels,
+  loadDraftingLabels,
+  saveDraftingLabels,
+} from "@/components/drafting/labels";
 
 export const RESTART_MS = 1800;
 export const DEFAULT_STEP_MS = 1000;
@@ -62,6 +68,8 @@ interface WorkflowStore {
   layoutVersion: number;
   /** Full-screen Proposal drafting drill-down. */
   draftingOpen: boolean;
+  /** Label overrides for the drafting animation, keyed by label id. */
+  draftingLabels: Record<string, string>;
 
   stopNode: (id: string) => void;
   startNode: (id: string) => void;
@@ -77,6 +85,8 @@ interface WorkflowStore {
   setNodePosition: (id: string, position: { x: number; y: number }) => void;
   setMetricValue: (id: string, key: string, value: number) => void;
   resetLayout: () => void;
+  setDraftingLabel: (id: string, value: string) => void;
+  resetDraftingLabels: () => void;
 }
 
 /** Current display name of a node, honoring Edit mode renames. */
@@ -177,6 +187,7 @@ export const useWorkflowStore = create<WorkflowStore>()((set, get) => ({
   edits: persistedEdits,
   layoutVersion: 0,
   draftingOpen: false,
+  draftingLabels: loadDraftingLabels(),
 
   stopNode: (id) => {
     cancelRestartTimer(id);
@@ -476,5 +487,24 @@ export const useWorkflowStore = create<WorkflowStore>()((set, get) => ({
       metrics[id] = { ...metrics[id], ...seeds };
     }
     set({ edits: {}, metrics, layoutVersion: state.layoutVersion + 1 });
+  },
+
+  setDraftingLabel: (id, value) => {
+    if (!(id in DRAFTING_LABEL_DEFAULTS)) return;
+    const state = get();
+    const next = { ...state.draftingLabels };
+    const trimmed = value.trim();
+    if (trimmed === "" || trimmed === DRAFTING_LABEL_DEFAULTS[id]) {
+      delete next[id];
+    } else {
+      next[id] = trimmed;
+    }
+    saveDraftingLabels(next);
+    set({ draftingLabels: next });
+  },
+
+  resetDraftingLabels: () => {
+    clearDraftingLabels();
+    set({ draftingLabels: {} });
   },
 }));

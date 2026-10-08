@@ -1,9 +1,16 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Gauge, Pause, Play, RotateCcw, X } from "lucide-react";
+import { Gauge, Pause, Pencil, Play, RotateCcw, Undo2, X } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { BLUE, DraftingScene, GREEN, RED } from "@/components/drafting/drafting-scene";
+import {
+  BLUE,
+  DraftingScene,
+  GREEN,
+  RED,
+  type LabelCtx,
+} from "@/components/drafting/drafting-scene";
+import { draftingLabel } from "@/components/drafting/labels";
 import {
   activeStageIndex,
   DRAFTING_STAGES,
@@ -35,6 +42,9 @@ export function DraftingOverlay() {
 
 function DraftingOverlayContent() {
   const closeDrafting = useWorkflowStore((s) => s.closeDrafting);
+  const labels = useWorkflowStore((s) => s.draftingLabels);
+  const setDraftingLabel = useWorkflowStore((s) => s.setDraftingLabel);
+  const resetDraftingLabels = useWorkflowStore((s) => s.resetDraftingLabels);
 
   const reducedMotion = useMemo(
     () =>
@@ -50,6 +60,9 @@ function DraftingOverlayContent() {
   const [paused, setPaused] = useState(initial.paused);
   const speedRef = useRef(1);
   const [speed, setSpeed] = useState(1);
+
+  const [editMode, setEditMode] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   useEffect(() => {
     if (reducedMotion) return;
@@ -70,7 +83,11 @@ function DraftingOverlayContent() {
 
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") closeDrafting();
+      if (event.key !== "Escape") return;
+      // Inline rename inputs handle Esc themselves (cancel the edit).
+      const target = event.target as HTMLElement | null;
+      if (target?.tagName === "INPUT") return;
+      closeDrafting();
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
@@ -81,15 +98,16 @@ function DraftingOverlayContent() {
     setT(value);
   };
 
-  const togglePause = () => {
-    pausedRef.current = !pausedRef.current;
-    setPaused(pausedRef.current);
+  const setPausedBoth = (value: boolean) => {
+    pausedRef.current = value;
+    setPaused(value);
   };
+
+  const togglePause = () => setPausedBoth(!pausedRef.current);
 
   const restart = () => {
     setClock(reducedMotion ? DRAFTING_TOTAL : 0);
-    pausedRef.current = false;
-    setPaused(false);
+    setPausedBoth(false);
   };
 
   const pickSpeed = (value: number) => {
@@ -102,6 +120,33 @@ function DraftingOverlayContent() {
     // With reduced motion the clock never advances, so jump to the end of
     // the stage to show its finished state statically.
     setClock(reducedMotion ? stage.end : stage.start);
+  };
+
+  const toggleEditMode = () => {
+    if (!editMode) {
+      // Editing happens on a frozen frame.
+      setEditMode(true);
+      setPausedBoth(true);
+      return;
+    }
+    setEditingId(null);
+    setEditMode(false);
+    if (reducedMotion) return;
+    // Resume with the edited labels; restart when the animation had ended.
+    if (tRef.current >= DRAFTING_TOTAL) setClock(0);
+    setPausedBoth(false);
+  };
+
+  const ctx: LabelCtx = {
+    editMode,
+    get: (id) => draftingLabel(labels, id),
+    editingId,
+    beginEdit: (id) => setEditingId(id),
+    commitEdit: (id, value) => {
+      setDraftingLabel(id, value);
+      setEditingId(null);
+    },
+    cancelEdit: () => setEditingId(null),
   };
 
   const stageIndex = activeStageIndex(t);
@@ -140,7 +185,7 @@ function DraftingOverlayContent() {
       </header>
 
       <div className="flex flex-wrap items-center gap-2 px-5 py-2.5">
-        {!reducedMotion && (
+        {!editMode && !reducedMotion && (
           <>
             <Button size="sm" variant="outline" onClick={togglePause} disabled={finished}>
               {paused ? <Play data-icon="inline-start" /> : <Pause data-icon="inline-start" />}
@@ -167,10 +212,29 @@ function DraftingOverlayContent() {
             </div>
           </>
         )}
-        {reducedMotion && (
+        {!editMode && reducedMotion && (
           <span className="text-[11px] text-muted-foreground">
             Reduced motion is on, showing the finished flow. Use the steps below to view each stage.
           </span>
+        )}
+
+        <Button
+          size="sm"
+          variant={editMode ? "default" : "outline"}
+          aria-pressed={editMode}
+          onClick={toggleEditMode}
+        >
+          <Pencil data-icon="inline-start" /> Edit mode
+        </Button>
+        {editMode && (
+          <>
+            <Button size="sm" variant="outline" onClick={resetDraftingLabels}>
+              <Undo2 data-icon="inline-start" /> Reset names
+            </Button>
+            <span className="text-[11px] text-muted-foreground">
+              Click any label to rename it. Enter or click away saves, Esc cancels.
+            </span>
+          </>
         )}
 
         <div className="ml-auto flex items-center gap-4 text-[11px] text-muted-foreground">
@@ -193,7 +257,7 @@ function DraftingOverlayContent() {
       </div>
 
       <div className="min-h-0 flex-1 px-4">
-        <DraftingScene t={t} />
+        <DraftingScene t={t} ctx={ctx} />
       </div>
 
       <nav
@@ -203,11 +267,20 @@ function DraftingOverlayContent() {
         {DRAFTING_STAGES.map((stage, index) => {
           const active = index === stageIndex;
           const done = t >= stage.end;
+          const labelId = `step.${stage.id}`;
+          const editingThis = editingId === labelId;
+          const label = draftingLabel(labels, labelId);
           return (
             <button
               key={stage.id}
               type="button"
-              onClick={() => jumpTo(index)}
+              onClick={() => {
+                if (editMode) {
+                  if (!editingThis) setEditingId(labelId);
+                } else {
+                  jumpTo(index);
+                }
+              }}
               aria-current={active ? "step" : undefined}
               className={cn(
                 "flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs transition-colors",
@@ -216,11 +289,12 @@ function DraftingOverlayContent() {
                   : done
                     ? "border-emerald-400/40 bg-emerald-400/10 text-emerald-300"
                     : "border-border bg-transparent text-muted-foreground hover:border-indigo-400/40 hover:text-foreground",
+                editMode && "border-dashed",
               )}
             >
               <span
                 className={cn(
-                  "flex size-5 items-center justify-center rounded-full text-[10px] font-semibold",
+                  "flex size-5 shrink-0 items-center justify-center rounded-full text-[10px] font-semibold",
                   active
                     ? "bg-indigo-400/30 text-indigo-100"
                     : done
@@ -230,11 +304,56 @@ function DraftingOverlayContent() {
               >
                 {index + 1}
               </span>
-              {stage.label}
+              {editingThis ? (
+                <StepLabelInput
+                  initial={label}
+                  onCommit={(value) => {
+                    setDraftingLabel(labelId, value);
+                    setEditingId(null);
+                  }}
+                  onCancel={() => setEditingId(null)}
+                />
+              ) : (
+                <span className="max-w-36 truncate" title={label}>
+                  {label}
+                </span>
+              )}
             </button>
           );
         })}
       </nav>
     </div>
+  );
+}
+
+function StepLabelInput({
+  initial,
+  onCommit,
+  onCancel,
+}: {
+  initial: string;
+  onCommit: (value: string) => void;
+  onCancel: () => void;
+}) {
+  const [value, setValue] = useState(initial);
+  return (
+    <input
+      autoFocus
+      value={value}
+      onChange={(e) => setValue(e.target.value)}
+      onFocus={(e) => e.target.select()}
+      onBlur={() => onCommit(value)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          onCommit(value);
+        } else if (e.key === "Escape") {
+          e.stopPropagation();
+          onCancel();
+        }
+      }}
+      onClick={(e) => e.stopPropagation()}
+      aria-label={`Rename ${initial}`}
+      className="w-28 rounded border border-indigo-400/70 bg-[#0b1322] px-1 text-xs text-foreground outline-none"
+    />
   );
 }
