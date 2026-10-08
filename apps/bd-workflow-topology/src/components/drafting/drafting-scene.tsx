@@ -1,4 +1,4 @@
-import { useRef } from "react";
+import { useEffect, useRef, useState } from "react";
 import { easeInOut, seg } from "@/components/drafting/timeline";
 
 /**
@@ -258,6 +258,15 @@ export function DraftingScene({ t }: { t: number }) {
   const setPathRef = (id: string) => (el: SVGPathElement | null) => {
     if (el) pathRefs.current.set(id, el);
   };
+
+  // Re-render once after the paths are in the DOM so the pill can measure
+  // them even when the clock starts paused (deep link) or pinned (reduced
+  // motion).
+  const [, setMounted] = useState(false);
+  useEffect(() => {
+    // oxlint-disable-next-line react/set-state-in-effect
+    setMounted(true);
+  }, []);
 
   // Ticket pill position along the active segment. The pill needs
   // getPointAtLength from the rendered path, so the ref is read during

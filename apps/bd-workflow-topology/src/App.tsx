@@ -8,9 +8,10 @@ import { WorkflowCanvas } from "@/components/topology/workflow-canvas";
 import { useWorkflowStore } from "@/store/workflow-store";
 
 export default function App() {
-  // Deep link straight into the drafting animation.
+  // Deep link straight into the drafting animation. #drafting plays it,
+  // #drafting=12 opens it paused at 12 seconds.
   useEffect(() => {
-    if (window.location.hash === "#drafting") {
+    if (window.location.hash.startsWith("#drafting")) {
       useWorkflowStore.getState().openDrafting();
     }
   }, []);

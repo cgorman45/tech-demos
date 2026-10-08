@@ -13,6 +13,20 @@ import { useWorkflowStore } from "@/store/workflow-store";
 
 const SPEEDS = [0.5, 1, 2] as const;
 
+/**
+ * The #drafting deep link can carry a clock value, e.g. #drafting=12 opens
+ * the overlay paused at 12 seconds into the animation.
+ */
+function initialClock(reducedMotion: boolean): { t: number; paused: boolean } {
+  if (typeof window !== "undefined") {
+    const match = /^#drafting=(\d+(?:\.\d+)?)$/.exec(window.location.hash);
+    if (match) {
+      return { t: Math.min(DRAFTING_TOTAL, Number(match[1])), paused: true };
+    }
+  }
+  return { t: reducedMotion ? DRAFTING_TOTAL : 0, paused: false };
+}
+
 export function DraftingOverlay() {
   const open = useWorkflowStore((s) => s.draftingOpen);
   if (!open) return null;
@@ -29,11 +43,11 @@ function DraftingOverlayContent() {
     [],
   );
 
-  const initialT = reducedMotion ? DRAFTING_TOTAL : 0;
-  const tRef = useRef(initialT);
-  const [t, setT] = useState(initialT);
-  const pausedRef = useRef(false);
-  const [paused, setPaused] = useState(false);
+  const initial = useMemo(() => initialClock(reducedMotion), [reducedMotion]);
+  const tRef = useRef(initial.t);
+  const [t, setT] = useState(initial.t);
+  const pausedRef = useRef(initial.paused);
+  const [paused, setPaused] = useState(initial.paused);
   const speedRef = useRef(1);
   const [speed, setSpeed] = useState(1);
 

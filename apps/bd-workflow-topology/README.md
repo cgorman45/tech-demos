@@ -30,6 +30,7 @@ Five lanes, left to right: Find, New lead, Claude workspace, Meet, Won work. Thi
 - **Stop, Start, Restart**: open any node and change its lifecycle. Stopping a step turns everything downstream amber, and a run stalls when it reaches a stopped or degraded step.
 - **Inspect panel**: click a node for its description, lane, tool, stats (marked Example data), recent log lines, and lifecycle buttons.
 - **Edit mode**: toggle it in the top bar. Nodes become draggable, and the inspect panel gains fields to rename a step, change its subtitle, and edit its metric values. Edits are saved to localStorage and survive a reload. Reset layout clears all saved edits. Log lines always use the current names.
+- **Drafting animation**: click the Proposal drafting node (outside Edit mode) to open a full screen drill-down of how a proposal gets drafted. An RFP ticket rides the flow: intake, knowledge base matches, a draft and critique loop with rounds and a sent back arc, parallel sections that merge, a review hub that approves checks one by one and sends one back for a fix, then sign off and submit. Controls offer pause, restart, and 0.5x, 1x, 2x speed, and the bottom step bar jumps between stages. Esc or the X closes it. With prefers-reduced-motion the finished flow is shown statically and the step bar still works. Deep links: `#drafting` opens it playing, `#drafting=12` opens it paused at 12 seconds.
 
 ## Status rule
 
