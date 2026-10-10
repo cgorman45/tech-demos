@@ -1,0 +1,25 @@
+opportunity,agency,stage,value,probability,due_date,owner
+Streetlight LED retrofit,City of Example,Lead,"$450,000",20%,2026-11-18,Avery
+Water main assessment,Harbor City,Lead,180000,15%,2026-11-03,Jordan
+Transit corridor study,Lakeview County,Lead,"$2,400,000",10%,2026-12-03,Sam
+Facility condition audit,Northside School District,Lead,320000,20%,2026-10-21,Riley
+Microgrid feasibility,Port of Example,Lead,760000,15%,2026-11-11,Casey
+Fleet electrification plan,Grandview Township,Lead,95000,25%,2026-10-17,Avery
+Energy audit bundle,City of Example,Qualified,"$680,000",35%,2026-10-27,Jordan
+Wastewater plant upgrade,Harbor City,Qualified,"$3,900,000",30%,2026-12-08,Sam
+Solar carport design,Northside School District,Qualified,540000,40%,2026-10-31,Riley
+Broadband gap study,Lakeview County,Qualified,210000,35%,2026-10-24,Casey
+HVAC controls retrofit,Summit Valley Authority,Qualified,880000,45%,2026-11-06,Avery
+Seawall resilience design,Port of Example,Proposal,"$1,750,000",55%,2026-10-15,Jordan
+Campus lighting upgrade,Northside School District,Proposal,430000,60%,2026-10-19,Sam
+Pump station controls,Harbor City,Proposal,640000,50%,2026-10-13,Riley
+Building automation rollout,City of Example,Proposal,"$1,150,000",55%,2026-10-29,Casey
+Stormwater master plan,Grandview Township,Proposal,980000,45%,2026-11-04,Avery
+District energy study,Summit Valley Authority,Shortlisted,"$1,300,000",70%,2026-10-18,Jordan
+EV charging network,City of Example,Shortlisted,"$2,100,000",65%,2026-10-23,Sam
+Water meter replacement,Lakeview County,Shortlisted,870000,75%,2026-10-12,Riley
+Streetscape redesign,Harbor City,Won,"$1,600,000",100%,2026-09-19,Casey
+School HVAC phase 1,Northside School District,Won,720000,100%,2026-09-04,Avery
+Port lighting retrofit,Port of Example,Won,380000,100%,2026-09-27,Jordan
+County fleet study,Lakeview County,Lost,150000,0%,2026-09-14,Sam
+Civic center energy audit,City of Example,Lost,"$80,000",0%,2026-08-30,Riley
