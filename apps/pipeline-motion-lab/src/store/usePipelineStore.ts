@@ -135,7 +135,9 @@ export const usePipelineStore = create<PipelineState>()(
       setClock: (time) => set({ clock: clampTime(time) }),
       setPlaying: (playing) => set({ playing }),
       setSpeed: (speed) => set({ speed }),
-      seekScene: (index) => set({ clock: sceneStart(index) }),
+      // Jumping to a scene also resumes playback, so a seek never strands
+      // the presenter on a blank scene start.
+      seekScene: (index) => set({ clock: sceneStart(index), playing: true }),
       restart: () => set({ clock: 0, playing: true }),
     }),
     {
