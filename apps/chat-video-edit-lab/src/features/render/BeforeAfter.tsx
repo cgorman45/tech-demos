@@ -60,12 +60,11 @@ export function BeforeAfter({ source, plan }: BeforeAfterProps) {
         {mode === "ab" && (
           <Button
             size="sm"
-            variant="secondary"
-            onPointerDown={() => setShowOriginal(true)}
-            onPointerUp={() => setShowOriginal(false)}
-            onPointerLeave={() => setShowOriginal(false)}
+            variant={showOriginal ? "default" : "secondary"}
+            onClick={() => setShowOriginal((v) => !v)}
+            title="Or hold the B key"
           >
-            {showOriginal ? "Showing original" : "Hold for original (B)"}
+            {showOriginal ? "Showing original (B)" : "Show original (B)"}
           </Button>
         )}
       </div>
