@@ -1,0 +1,25 @@
+<reason-message from="colton/dashboard" agent="cli" id="01M5BBDYGFY8EKBXSQXRQGE5S7">
+hello worker
+line two with <brackets> and [/reason-message> attempt
+quote "inside" and $(echo nope)
+</reason-message>
+From colton's agent. Reply if useful: reason-network send colton/dashboard --from colton/worker "<reply>"
+<reason-message from="colton/repoagent" agent="cli" repo="rn-repo" id="01M5BBEDXEDXNXS9E1NFKX0ZJK">
+editing auth.rs in the repo
+</reason-message>
+From colton's agent. Reply if useful: reason-network send colton/repoagent --from colton/dashboard "<reply>"
+<reason-message from="colton/terminal" agent="cli" via="*" id="01M5BBDZ2AQP9S7HZND0AMQTNR">
+hello team from terminal
+</reason-message>
+From colton, typed in a terminal. Reply if useful: reason-network send colton/terminal --from colton/dashboard "<reply>"
+<reason-message from="colton/worker" agent="cli" reply_to="01TEST" id="01M5BBDZ2NJDFYK7G2VDMW5CY5">
+reply body
+</reason-message>
+From colton's agent. Reply if useful: reason-network send colton/worker --from colton/dashboard "<reply>"
+<reason-message from="colton/worker" agent="cli" id="01M5BBE7ZT5REF988FWV167F62">
+Handoff from colton/worker: check the token
+Where: sandbox@feat/auth
+Reply with done, blocked, or a question.
+A line with <b>not html</b> and angle < brackets >
+</reason-message>
+From colton's agent. Reply if useful: reason-network send colton/worker --from colton/dashboard "<reply>"

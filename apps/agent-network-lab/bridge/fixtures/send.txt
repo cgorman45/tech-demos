@@ -1,0 +1,8 @@
+→ colton/worker: delivered: the session was waiting for messages
+message id 01M5BBDYGFY8EKBXSQXRQGE5S7
+→ colton/worker: queued: it gets it the next time it listens
+message id 01M5BBDYGN4Z57DFVM06GFPE8F
+→ colton/worker: queued as FYI: it reads it at its next natural pause
+message id 01M5BBDYJ2KMXWNBH3QVSM8E4V
+→ colton/worker: queued: it gets it the next time it listens; not popped up: cursor has no desktop to show it on
+message id 01M5BBDYJ7CVW9YSS946TTWQM0
